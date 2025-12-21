@@ -67,12 +67,12 @@ const App: React.FC = () => {
       setPlants(getPlants());
       setSelectedPlant(updated);
     } catch (e: any) {
-      alert(e.message || "Error");
+      alert("Error local: " + e.message);
     }
   };
 
   const deleteHistoryItem = (type: 'riego' | 'abono' | 'hidrometria', index: number) => {
-    if (!selectedPlant || !confirm("¿Eliminar este registro permanentemente?")) return;
+    if (!selectedPlant || !confirm("¿Eliminar registro?")) return;
     const updated = { ...selectedPlant };
     if (type === 'riego') updated.historial_riego = updated.historial_riego.filter((_, i) => i !== index);
     if (type === 'abono') updated.historial_abono = updated.historial_abono.filter((_, i) => i !== index);
@@ -116,8 +116,8 @@ const App: React.FC = () => {
       updated.salud.hidrometria = valor;
       updatePlantData(updated);
       setShowDayMenu(null);
-    } catch (err) {
-      alert("Error en interpretación de hidrometría");
+    } catch (err: any) {
+      alert("Error Hidrometría: " + err.message);
     } finally {
       setIsAnalyzing(false);
     }
@@ -161,8 +161,9 @@ const App: React.FC = () => {
       setManualHeight(result.medidas_sugeridas.altura_cm);
       setManualPotDiam(result.medidas_sugeridas.maceta_diametro_cm);
       setManualPotHeight(result.medidas_sugeridas.maceta_altura_cm || 0);
-    } catch (error) { 
-      alert("Error análisis botánico."); 
+    } catch (error: any) { 
+      // Alerta con detalle técnico para depurar
+      alert("LOG_ERROR: " + (error.message || "Error desconocido")); 
     } finally { 
       setIsAnalyzing(false); 
     }
@@ -280,7 +281,7 @@ const App: React.FC = () => {
                       onChange={(e) => handleManualHidrometriaChange(parseInt(e.target.value))}
                       className="w-full h-2 bg-white/10 rounded-lg appearance-none accent-emerald-400 cursor-pointer" 
                     />
-                    <p className="text-[9px] mt-4 opacity-50 italic text-center">Desliza para ajustar manualmente o usa el scanner en popup</p>
+                    <p className="text-[9px] mt-4 opacity-50 italic text-center">Ajuste manual táctil o scanner rápido</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -298,11 +299,11 @@ const App: React.FC = () => {
                   <div className={`space-y-6 ${isLargeFont ? 'text-lg' : 'text-sm'}`}>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-stone-50 p-4 rounded-3xl">
-                        <span className={`${smallTextSize} uppercase font-black text-stone-300 block mb-1`}>Familia / Longevidad</span>
+                        <span className={`${smallTextSize} uppercase font-black text-stone-300 block mb-1`}>Longevidad</span>
                         <p className="font-bold text-emerald-900 leading-tight">{selectedPlant.ficha_botanica.longevidad_estimada}</p>
                       </div>
                       <div className="bg-stone-50 p-4 rounded-3xl">
-                        <span className={`${smallTextSize} uppercase font-black text-stone-300 block mb-1`}>Geografía / Origen</span>
+                        <span className={`${smallTextSize} uppercase font-black text-stone-300 block mb-1`}>Origen</span>
                         <p className="font-bold text-emerald-900 leading-tight">{selectedPlant.ficha_botanica.origen_geografico}</p>
                       </div>
                     </div>
@@ -311,13 +312,13 @@ const App: React.FC = () => {
                        <h4 className={`${smallTextSize} uppercase font-black text-emerald-700 mb-3 flex items-center gap-2`}><InfoIcon className="w-3 h-3"/> Morfología Distintiva</h4>
                        <div className="space-y-3">
                          <p><strong className="text-emerald-900 font-bold italic">Hojas:</strong> {selectedPlant.ficha_botanica.tipo_hojas}</p>
-                         <p><strong className="text-emerald-900 font-bold italic">Sistema Radicular:</strong> {selectedPlant.ficha_botanica.tipo_raices}</p>
-                         <p><strong className="text-emerald-900 font-bold italic">Estructura:</strong> {selectedPlant.ficha_botanica.particularidades}</p>
+                         <p><strong className="text-emerald-900 font-bold italic">Raíces:</strong> {selectedPlant.ficha_botanica.tipo_raices}</p>
+                         <p><strong className="text-emerald-900 font-bold italic">Particularidades:</strong> {selectedPlant.ficha_botanica.particularidades}</p>
                        </div>
                     </div>
 
                     <div className="bg-emerald-50 p-8 rounded-[3rem] border border-emerald-100">
-                       <h4 className={`${smallTextSize} uppercase font-black text-emerald-800 mb-4 flex items-center gap-2`}><PlusIcon className="w-3 h-3 rotate-45 text-emerald-500"/> Curiosidades Fascinantes</h4>
+                       <h4 className={`${smallTextSize} uppercase font-black text-emerald-800 mb-4 flex items-center gap-2`}><PlusIcon className="w-3 h-3 rotate-45 text-emerald-500"/> Curiosidades</h4>
                        <p className="leading-relaxed text-emerald-900 font-serif italic text-base">"{selectedPlant.ficha_botanica.curiosidades}"</p>
                     </div>
 
