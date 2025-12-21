@@ -1,0 +1,7 @@
+{
+  "name": "Botanica Pro",
+  "description": "Una herramienta profesional de gestión botánica con IA para identificar, diagnosticar y cuidar tus plantas de interior.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
