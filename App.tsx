@@ -65,14 +65,20 @@ const App: React.FC = () => {
   }, []);
 
   const checkApiKeyStatus = async () => {
+    // 1. Si estamos en Vercel/Producción con clave inyectada, saltar setup
     if (process.env.API_KEY && process.env.API_KEY !== "undefined" && process.env.API_KEY !== "") {
       setIsKeySetupComplete(true);
       return;
     }
-    if (window.aistudio) {
-      const hasKey = await window.aistudio.hasSelectedApiKey();
-      if (hasKey) setIsKeySetupComplete(true);
+    // 2. Si NO estamos en AI Studio (ej: Vercel sin clave aún), dejamos pasar al usuario 
+    // pero fallará en el servicio con un error descriptivo si intenta escanear.
+    if (!window.aistudio) {
+      setIsKeySetupComplete(true);
+      return;
     }
+    // 3. Si estamos en AI Studio, usamos el selector oficial
+    const hasKey = await window.aistudio.hasSelectedApiKey();
+    if (hasKey) setIsKeySetupComplete(true);
   };
 
   const handleOpenKeySelector = async () => {
@@ -80,7 +86,7 @@ const App: React.FC = () => {
       await window.aistudio.openSelectKey();
       setIsKeySetupComplete(true);
     } else {
-      alert("Selector nativo no disponible. Si estás en Vercel, configura API_KEY en el dashboard.");
+      alert("Para usar en Vercel, configura la variable API_KEY en el Dashboard del proyecto.");
     }
   };
 
@@ -88,7 +94,7 @@ const App: React.FC = () => {
     if (!selectedPlant) return;
     const text = `FICHA BOTÁNICA: ${selectedPlant.identificacion.cientifico}\n\nOrigen: ${selectedPlant.ficha_botanica.origen_geografico}\nLongevidad: ${selectedPlant.ficha_botanica.longevidad_estimada}\n\nINFORME:\n${selectedPlant.ficha_botanica.explicacion_botanica_extensa}\n\nCURIOSIDADES:\n${selectedPlant.ficha_botanica.curiosidades}`;
     navigator.clipboard.writeText(text);
-    alert("Informe copiado al portapapeles.");
+    alert("Informe copiado.");
   };
 
   const toggleFontSize = () => {
@@ -199,10 +205,13 @@ const App: React.FC = () => {
       setManualPotHeight(result.medidas_sugeridas.maceta_altura_cm || 0);
     } catch (error: any) { 
       const msg = error.message || "";
-      if (msg.includes("API_KEY_MISSING") || msg.includes("not found") || msg.includes("no válida")) {
-        setIsKeySetupComplete(false);
+      if (msg.includes("API_KEY_MISSING") || msg.includes("not found")) {
+        // Solo volvemos al setup si estamos en un entorno que soporta el selector
+        if (window.aistudio) setIsKeySetupComplete(false);
+        else alert("API_KEY no configurada en Vercel. Ve a Settings > Environment Variables.");
+      } else {
+        alert(msg || "Error en el análisis maestro.");
       }
-      alert(msg || "Error en el análisis maestro."); 
     } finally { 
       setIsAnalyzing(false); 
     }
@@ -412,7 +421,8 @@ const App: React.FC = () => {
                   ...(selectedPlant.historial_abono || []).map((a, idx) => ({ date: a.fecha, type: 'abono', sub: a.tipo, index: idx })),
                   ...(selectedPlant.historial_hidrometria || []).map((h, idx) => ({ date: h.fecha, type: 'hidrometria', val: h.valor, index: idx }))
                 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .map((item, i) => (
+                /* Use 'any' type to avoid property missing errors on union type */
+                .map((item: any, i) => (
                   <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-4">
                       <div className={`p-4 rounded-2xl ${item.type === 'riego' ? 'bg-blue-50 text-blue-600' : item.type === 'abono' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
