@@ -3,16 +3,10 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GeminiResponse } from "./types";
 
 export async function analyzePlant(base64Images: string[], currentPotSize?: number): Promise<GeminiResponse> {
-  // Intentamos obtener la clave de forma segura
-  let apiKey: string | undefined;
-  try {
-    apiKey = process.env.API_KEY;
-  } catch (e) {
-    apiKey = undefined;
-  }
+  const apiKey = process.env.API_KEY;
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("API_KEY_MISSING: La clave API no está configurada en el entorno de ejecución.");
+    throw new Error("API_KEY_MISSING: Por favor, vincula tu clave de API en el menú de configuración.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -24,19 +18,24 @@ export async function analyzePlant(base64Images: string[], currentPotSize?: numb
     }
   }));
 
-  const prompt = `Actúa como un Arquitecto Botánico Senior y Etnobotánico. Realiza una telemetría y monografía completa del espécimen en las imágenes.
+  const prompt = `Actúa como un Arquitecto Botánico Senior y Etnobotánico. Realiza una telemetría completa del espécimen.
   
-  OBLIGATORIO:
-  1. Identificación: Nombres científicos y comunes precisos.
-  2. Biometría: Altura actual, maceta y ALTURA MÁXIMA potencial.
-  3. Longevidad: Ciclo de vida y esperanza de vida.
-  4. Salud: Análisis foliar, turgencia y vigor radicular.
-  5. Cuidados Técnicos: Riego (técnica, ml, guía aspersión) y estacionalidad completa.
-  6. Botánica Avanzada: Origen evolutivo, CURIOSIDADES históricas y PARTICULARIDADES únicas de la especie.`;
+  REGLAS CRÍTICAS DE DATOS:
+  - vigor_index: Debe ser un número ENTERO de 0 a 100 (ej: 85, no 0.85).
+  - estado_raices: Debe ser un número ENTERO de 0 a 100.
+  - hidrometria: Número entero de 0 a 10.
+  
+  CONTENIDO OBLIGATORIO:
+  1. Identificación: Científica y común.
+  2. Biometría: Altura y maceta actual vs potencial máximo.
+  3. Longevidad: Ciclo vital estimado.
+  4. Salud: Análisis foliar y vigor.
+  5. Cuidados: Guía de riego (ml, frecuencia, técnica) y estacionalidad.
+  6. Ficha Botánica: Origen, curiosidades y rasgos morfológicos únicos.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview", // Flash es óptimo para estabilidad en Vercel
+      model: "gemini-3-flash-preview",
       contents: { parts: [...parts, { text: prompt }] },
       config: { 
         responseMimeType: "application/json",
@@ -53,8 +52,8 @@ export async function analyzePlant(base64Images: string[], currentPotSize?: numb
               properties: {
                 estado: { type: Type.STRING }, observaciones: { type: Type.STRING },
                 hidrometria: { type: Type.NUMBER }, analisis_foliar: { type: Type.STRING },
-                riesgo_plagas: { type: Type.STRING }, vigor_index: { type: Type.NUMBER },
-                estado_raices: { type: Type.NUMBER }
+                riesgo_plagas: { type: Type.STRING }, vigor_index: { type: Type.NUMBER, description: "Porcentaje entero de 0 a 100" },
+                estado_raices: { type: Type.NUMBER, description: "Porcentaje entero de 0 a 100" }
               },
               required: ["estado", "observaciones", "analisis_foliar", "vigor_index", "estado_raices"]
             },
@@ -111,12 +110,14 @@ export async function analyzePlant(base64Images: string[], currentPotSize?: numb
     });
 
     const text = response.text;
-    if (!text) throw new Error("EMPTY_RESPONSE: El modelo no devolvió datos.");
+    if (!text) throw new Error("EMPTY_RESPONSE");
     return JSON.parse(text.trim()) as GeminiResponse;
   } catch (error: any) {
-    console.error("DEBUG_BOTANICA:", error);
-    // Propagamos el error con un prefijo para identificarlo en la UI
-    throw new Error(`ANALYSIS_FAILED: ${error.message || "Error en red o procesamiento"}`);
+    console.error("ANALYSIS_ERROR:", error);
+    if (error.message?.includes("not found")) {
+      throw new Error("Clave API no válida. Reconfigura el acceso.");
+    }
+    throw new Error(error.message || "Error en la telemetría botánica.");
   }
 }
 
@@ -129,7 +130,7 @@ export async function quickHydrometryUpdate(base64Image: string): Promise<number
     model: "gemini-3-flash-preview",
     contents: { parts: [
       { inlineData: { data: base64Image.split(',')[1], mimeType: "image/jpeg" } },
-      { text: "Humedad sustrato 0-10. Solo número." }
+      { text: "Humedad sustrato 0-10. Solo el número entero." }
     ] }
   });
   return parseInt(response.text?.trim() || "5") || 5;

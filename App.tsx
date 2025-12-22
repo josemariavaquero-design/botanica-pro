@@ -11,20 +11,27 @@ type TabType = 'tipologia' | 'botanica' | 'mantenimiento' | 'historial';
 const LOCATIONS = ["Salón", "Terraza", "Oficina", "Cocina", "Dormitorio", "Baño", "Pasillo", "Exterior", "Personalizado..."];
 
 const HealthGauge: React.FC<{ vigor: number, size?: number }> = ({ vigor, size = 80 }) => {
+  const normalizedVigor = vigor <= 1 && vigor > 0 ? Math.round(vigor * 100) : Math.round(vigor);
   const radius = (size / 2) - 4;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (vigor / 100) * circumference;
-  const color = vigor > 80 ? '#10b981' : vigor > 50 ? '#f59e0b' : '#ef4444';
+  const offset = circumference - (normalizedVigor / 100) * circumference;
+  const color = normalizedVigor > 80 ? '#10b981' : normalizedVigor > 50 ? '#f59e0b' : '#ef4444';
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       <svg className="transform -rotate-90 w-full h-full">
         <circle cx={size/2} cy={size/2} r={radius} stroke="#f1f1f1" strokeWidth="4" fill="transparent" />
-        <circle cx={size/2} cy={size/2} r={radius} stroke={color} strokeWidth="4" fill="transparent" 
-          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000" />
+        <circle 
+          cx={size/2} cy={size/2} r={radius} 
+          stroke={color} strokeWidth="4" fill="transparent" 
+          strokeDasharray={circumference} 
+          strokeDashoffset={offset} 
+          strokeLinecap="round" 
+          className="transition-all duration-1000 ease-out" 
+        />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-[10px] font-black" style={{ color }}>{vigor}%</span>
+        <span className="text-[11px] font-black tracking-tighter" style={{ color }}>{normalizedVigor}%</span>
       </div>
     </div>
   );
@@ -42,6 +49,7 @@ const App: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<GeminiResponse | null>(null);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [isLargeFont, setIsLargeFont] = useState(() => localStorage.getItem('largeFont') === 'true');
+  const [isKeySetupComplete, setIsKeySetupComplete] = useState(false);
   
   const [manualHeight, setManualHeight] = useState<number>(0);
   const [manualPotDiam, setManualPotDiam] = useState<number>(0);
@@ -53,7 +61,35 @@ const App: React.FC = () => {
 
   useEffect(() => {
     setPlants(getPlants());
+    checkApiKeyStatus();
   }, []);
+
+  const checkApiKeyStatus = async () => {
+    if (process.env.API_KEY && process.env.API_KEY !== "undefined" && process.env.API_KEY !== "") {
+      setIsKeySetupComplete(true);
+      return;
+    }
+    if (window.aistudio) {
+      const hasKey = await window.aistudio.hasSelectedApiKey();
+      if (hasKey) setIsKeySetupComplete(true);
+    }
+  };
+
+  const handleOpenKeySelector = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setIsKeySetupComplete(true);
+    } else {
+      alert("Selector nativo no disponible. Si estás en Vercel, configura API_KEY en el dashboard.");
+    }
+  };
+
+  const copyBotanicalInfo = () => {
+    if (!selectedPlant) return;
+    const text = `FICHA BOTÁNICA: ${selectedPlant.identificacion.cientifico}\n\nOrigen: ${selectedPlant.ficha_botanica.origen_geografico}\nLongevidad: ${selectedPlant.ficha_botanica.longevidad_estimada}\n\nINFORME:\n${selectedPlant.ficha_botanica.explicacion_botanica_extensa}\n\nCURIOSIDADES:\n${selectedPlant.ficha_botanica.curiosidades}`;
+    navigator.clipboard.writeText(text);
+    alert("Informe copiado al portapapeles.");
+  };
 
   const toggleFontSize = () => {
     const newVal = !isLargeFont;
@@ -67,7 +103,7 @@ const App: React.FC = () => {
       setPlants(getPlants());
       setSelectedPlant(updated);
     } catch (e: any) {
-      alert("Error local: " + e.message);
+      alert("Error: Memoria local agotada.");
     }
   };
 
@@ -117,7 +153,7 @@ const App: React.FC = () => {
       updatePlantData(updated);
       setShowDayMenu(null);
     } catch (err: any) {
-      alert("Error Hidrometría: " + err.message);
+      alert("Error: " + err.message);
     } finally {
       setIsAnalyzing(false);
     }
@@ -162,8 +198,11 @@ const App: React.FC = () => {
       setManualPotDiam(result.medidas_sugeridas.maceta_diametro_cm);
       setManualPotHeight(result.medidas_sugeridas.maceta_altura_cm || 0);
     } catch (error: any) { 
-      // Alerta con detalle técnico para depurar
-      alert("LOG_ERROR: " + (error.message || "Error desconocido")); 
+      const msg = error.message || "";
+      if (msg.includes("API_KEY_MISSING") || msg.includes("not found") || msg.includes("no válida")) {
+        setIsKeySetupComplete(false);
+      }
+      alert(msg || "Error en el análisis maestro."); 
     } finally { 
       setIsAnalyzing(false); 
     }
@@ -202,6 +241,26 @@ const App: React.FC = () => {
 
   const headingSize = isLargeFont ? 'text-4xl' : 'text-3xl';
   const smallTextSize = isLargeFont ? 'text-xs' : 'text-[10px]';
+
+  if (!isKeySetupComplete) {
+    return (
+      <div className="min-h-screen bg-emerald-950 flex flex-col items-center justify-center p-8 text-center animate-fade-in max-w-md mx-auto relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-800 rounded-full blur-[100px] -ml-32 -mt-32 opacity-20"></div>
+        <div className="relative z-10 bg-white/5 backdrop-blur-xl p-12 rounded-[5rem] border border-white/10 shadow-2xl">
+          <h1 className="font-serif text-5xl text-emerald-300 italic mb-6">Botanica Pro</h1>
+          <p className="text-emerald-100/60 font-medium leading-relaxed mb-10 text-sm">
+            Vincule su acceso a Google AI Studio para iniciar la telemetría avanzada.
+          </p>
+          <button 
+            onClick={handleOpenKeySelector}
+            className="w-full bg-emerald-500 text-emerald-950 py-6 rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-xl"
+          >
+            Vincular Acceso IA
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col max-w-md mx-auto bg-[#faf9f6] text-[#2d2d2d] shadow-2xl relative select-none font-sans overflow-x-hidden ${isLargeFont ? 'text-lg' : 'text-sm'}`}>
@@ -257,31 +316,28 @@ const App: React.FC = () => {
             {activeTab === 'tipologia' && (
               <div className="space-y-8 animate-fade-in">
                 <div className="bg-emerald-900 p-10 rounded-[4rem] text-white shadow-xl">
-                  <h3 className="font-serif italic text-2xl mb-8">Métricas Vitales</h3>
+                  <h3 className="font-serif italic text-2xl mb-8">Salud y Biometría</h3>
                   <div className="grid grid-cols-2 gap-6 mb-8">
                     <div className="bg-white/5 p-5 rounded-3xl border border-white/5">
                       <span className={`${smallTextSize} uppercase font-black opacity-40`}>Altura Actual</span>
                       <p className={`${isLargeFont ? 'text-3xl' : 'text-2xl'} font-black`}>{selectedPlant.medidas_usuario?.altura_cm || selectedPlant.medidas_sugeridas.altura_cm}cm</p>
                     </div>
-                    <div className="bg-white/5 p-5 rounded-3xl border border-white/5">
-                      <span className={`${smallTextSize} uppercase font-black opacity-40`}>Altura Máxima</span>
-                      <p className={`${isLargeFont ? 'text-3xl' : 'text-2xl'} font-black`}>{selectedPlant.medidas_sugeridas.altura_max_especie_cm}cm</p>
+                    <div className="flex items-center justify-center bg-white/5 p-5 rounded-3xl border border-white/5">
+                       <HealthGauge vigor={selectedPlant.salud.vigor_index || 0} size={70} />
                     </div>
                   </div>
                   
                   <div className="bg-white/5 p-8 rounded-[3rem] border border-white/10">
                     <div className="flex justify-between items-center mb-4">
-                      <span className={`${smallTextSize} uppercase font-black opacity-40`}>Hidrometría (Valor Actual)</span>
+                      <span className={`${smallTextSize} uppercase font-black opacity-40`}>Nivel Hidrometría</span>
                       <span className="text-xl font-black text-emerald-400">{selectedPlant.salud.hidrometria || 0}/10</span>
                     </div>
                     <input 
-                      type="range" 
-                      min="0" max="10" 
+                      type="range" min="0" max="10" 
                       value={selectedPlant.salud.hidrometria || 0} 
                       onChange={(e) => handleManualHidrometriaChange(parseInt(e.target.value))}
                       className="w-full h-2 bg-white/10 rounded-lg appearance-none accent-emerald-400 cursor-pointer" 
                     />
-                    <p className="text-[9px] mt-4 opacity-50 italic text-center">Ajuste manual táctil o scanner rápido</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -293,9 +349,12 @@ const App: React.FC = () => {
             {activeTab === 'botanica' && (
               <div className="space-y-8 animate-fade-in">
                 <div className="bg-white p-8 rounded-[3.5rem] border border-stone-100 shadow-sm relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full opacity-50 -mr-8 -mt-8"></div>
-                  <h3 className={`font-serif ${isLargeFont ? 'text-4xl' : 'text-3xl'} italic mb-8 border-b border-stone-50 pb-4 relative z-10 text-emerald-950`}>Gabinete Científico</h3>
-                  
+                  <div className="flex justify-between items-start mb-8 border-b border-stone-50 pb-4">
+                    <h3 className={`font-serif ${isLargeFont ? 'text-4xl' : 'text-3xl'} italic relative z-10 text-emerald-950`}>Gabinete Científico</h3>
+                    <button onClick={copyBotanicalInfo} className="bg-stone-100 text-stone-500 p-3 rounded-2xl active:scale-90 transition-all">
+                      <PlusIcon className="w-5 h-5" />
+                    </button>
+                  </div>
                   <div className={`space-y-6 ${isLargeFont ? 'text-lg' : 'text-sm'}`}>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-stone-50 p-4 rounded-3xl">
@@ -307,23 +366,12 @@ const App: React.FC = () => {
                         <p className="font-bold text-emerald-900 leading-tight">{selectedPlant.ficha_botanica.origen_geografico}</p>
                       </div>
                     </div>
-
-                    <div className="bg-stone-50 p-6 rounded-[2.5rem] border border-stone-100">
-                       <h4 className={`${smallTextSize} uppercase font-black text-emerald-700 mb-3 flex items-center gap-2`}><InfoIcon className="w-3 h-3"/> Morfología Distintiva</h4>
-                       <div className="space-y-3">
-                         <p><strong className="text-emerald-900 font-bold italic">Hojas:</strong> {selectedPlant.ficha_botanica.tipo_hojas}</p>
-                         <p><strong className="text-emerald-900 font-bold italic">Raíces:</strong> {selectedPlant.ficha_botanica.tipo_raices}</p>
-                         <p><strong className="text-emerald-900 font-bold italic">Particularidades:</strong> {selectedPlant.ficha_botanica.particularidades}</p>
-                       </div>
-                    </div>
-
                     <div className="bg-emerald-50 p-8 rounded-[3rem] border border-emerald-100">
-                       <h4 className={`${smallTextSize} uppercase font-black text-emerald-800 mb-4 flex items-center gap-2`}><PlusIcon className="w-3 h-3 rotate-45 text-emerald-500"/> Curiosidades</h4>
+                       <h4 className={`${smallTextSize} uppercase font-black text-emerald-800 mb-4`}>Curiosidades</h4>
                        <p className="leading-relaxed text-emerald-900 font-serif italic text-base">"{selectedPlant.ficha_botanica.curiosidades}"</p>
                     </div>
-
                     <div className="mt-8 pt-6">
-                       <h4 className={`${smallTextSize} uppercase font-black text-stone-300 mb-4 tracking-widest`}>Ensayo Biológico Extenso</h4>
+                       <h4 className={`${smallTextSize} uppercase font-black text-stone-300 mb-4 tracking-widest`}>Ensayo Biológico</h4>
                        <p className="leading-relaxed text-stone-700 text-justify">{selectedPlant.ficha_botanica.explicacion_botanica_extensa}</p>
                     </div>
                   </div>
@@ -334,40 +382,23 @@ const App: React.FC = () => {
             {activeTab === 'mantenimiento' && (
               <div className="space-y-10 animate-fade-in">
                 <PlantCalendar plant={selectedPlant} onSelectDate={(d) => setShowDayMenu({ date: d })} />
-
                 <div className="bg-emerald-950 p-8 rounded-[3.5rem] text-white shadow-2xl">
                    <h4 className="font-serif italic text-2xl text-emerald-300 mb-8">Manual de Hidratación</h4>
-                   <div className={`space-y-8 ${isLargeFont ? 'text-base' : 'text-xs'}`}>
+                   <div className="space-y-8">
                       <div>
-                        <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-3`}>Técnica y Forma</span>
-                        <p className="opacity-90 bg-white/5 p-5 rounded-3xl border border-white/5">{selectedPlant.cuidados.forma_riego}</p>
-                      </div>
-                      <div>
-                        <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-3`}>Aspersión Foliar</span>
-                        <p className="opacity-90 bg-white/5 p-5 rounded-3xl border border-white/5">{selectedPlant.cuidados.recomendacion_aspersion}</p>
+                        <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-3`}>Técnica</span>
+                        <p className="opacity-90 bg-white/5 p-5 rounded-3xl">{selectedPlant.cuidados.forma_riego}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/5 p-5 rounded-3xl border border-white/5">
-                           <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-2`}>Caudal Recomendado</span>
-                           <p className="text-xl font-black">{selectedPlant.cuidados.agua_ml} <span className="text-[10px] opacity-40">ml</span></p>
+                        <div className="bg-white/5 p-5 rounded-3xl">
+                           <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-2`}>Caudal</span>
+                           <p className="text-xl font-black">{selectedPlant.cuidados.agua_ml} ml</p>
                         </div>
-                        <div className="bg-white/5 p-5 rounded-3xl border border-white/5">
-                           <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-2`}>Estado Suelo</span>
-                           <p className="text-sm opacity-90">{selectedPlant.cuidados.cantidad_agua_info}</p>
+                        <div className="bg-white/5 p-5 rounded-3xl">
+                           <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-2`}>Frecuencia</span>
+                           <p className="text-xl font-black">c/ {selectedPlant.cuidados.frecuencia_dias} días</p>
                         </div>
                       </div>
-                   </div>
-                </div>
-
-                <div className="bg-white p-8 rounded-[3.5rem] border border-stone-100 shadow-sm">
-                   <h4 className="font-serif italic text-2xl mb-8">Ciclo Estacional</h4>
-                   <div className="space-y-5">
-                      {selectedPlant.cuidados.periodicidad_estacional && Object.entries(selectedPlant.cuidados.periodicidad_estacional).map(([estacion, info]) => (
-                        <div key={estacion} className="flex justify-between items-start border-b border-stone-50 pb-4">
-                           <span className={`${smallTextSize} font-black uppercase text-stone-300 mt-1`}>{estacion}</span>
-                           <span className={`text-right font-medium text-stone-800 ml-4 ${isLargeFont ? 'text-sm' : 'text-xs'}`}>{info}</span>
-                        </div>
-                      ))}
                    </div>
                 </div>
               </div>
@@ -382,19 +413,19 @@ const App: React.FC = () => {
                   ...(selectedPlant.historial_hidrometria || []).map((h, idx) => ({ date: h.fecha, type: 'hidrometria', val: h.valor, index: idx }))
                 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .map((item, i) => (
-                  <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 flex items-center justify-between shadow-sm group">
+                  <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-4">
                       <div className={`p-4 rounded-2xl ${item.type === 'riego' ? 'bg-blue-50 text-blue-600' : item.type === 'abono' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
                         {item.type === 'riego' ? <WaterIcon className="w-5 h-5" /> : item.type === 'abono' ? <FertilizerIcon className="w-5 h-5" /> : <InfoIcon className="w-5 h-5" />}
                       </div>
                       <div>
                         <p className={`font-black uppercase ${smallTextSize} tracking-widest`}>
-                          {item.type === 'hidrometria' ? `Humedad: ${item.val}/10` : item.type} {item.sub ? `(${item.sub})` : ''}
+                          {item.type === 'hidrometria' ? `Humedad: ${item.val}/10` : item.type}
                         </p>
-                        <p className="text-xs text-stone-300 mt-1">{new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                        <p className="text-xs text-stone-300 mt-1">{new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</p>
                       </div>
                     </div>
-                    <button onClick={() => deleteHistoryItem(item.type as any, item.index)} className="p-3 text-stone-200 hover:text-rose-500 transition-colors">
+                    <button onClick={() => deleteHistoryItem(item.type as any, item.index)} className="p-3 text-stone-200 hover:text-rose-500">
                       <TrashIcon className="w-5 h-5" />
                     </button>
                   </div>
@@ -437,9 +468,14 @@ const App: React.FC = () => {
               </div>
             ) : isAnalyzing ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-10">
-                <div className="w-20 h-20 border-4 border-emerald-700 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-24 h-24 relative flex items-center justify-center">
+                   <div className="absolute inset-0 border-4 border-emerald-700/20 rounded-full"></div>
+                   <div className="absolute inset-0 border-4 border-emerald-700 border-t-transparent rounded-full animate-spin"></div>
+                   <div className="w-10 h-10 bg-emerald-700 rounded-full animate-pulse"></div>
+                </div>
                 <div className="text-center">
-                   <p className="font-black uppercase tracking-[0.4em] text-emerald-950 text-xs">Consultando Archivos Botánicos...</p>
+                  <p className="font-serif italic text-2xl text-emerald-950 mb-2">Consultando Archivos Botánicos</p>
+                  <p className="font-black uppercase tracking-[0.4em] text-stone-300 text-[9px]">Sincronizando con Google AI Studio...</p>
                 </div>
               </div>
             ) : (
@@ -458,41 +494,17 @@ const App: React.FC = () => {
       {showDayMenu && (
         <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md flex items-center justify-center p-8">
           <div className="bg-white w-full max-w-sm rounded-[4.5rem] p-12 relative shadow-2xl border border-stone-50">
-            <button onClick={() => setShowDayMenu(null)} className="absolute top-10 right-10 text-stone-300 hover:text-stone-500 transition-colors">
-              <PlusIcon className="w-8 h-8 rotate-45" />
-            </button>
-            <h3 className="font-serif text-3xl italic text-center mb-10 text-emerald-950">
-              {new Date(showDayMenu.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
-            </h3>
+            <button onClick={() => setShowDayMenu(null)} className="absolute top-10 right-10 text-stone-300"><PlusIcon className="w-8 h-8 rotate-45" /></button>
+            <h3 className="font-serif text-3xl italic text-center mb-10 text-emerald-950">Evento Botánico</h3>
             <div className="space-y-5">
-              <button onClick={() => handleActionFromDay('riego', showDayMenu.date)} className="w-full flex items-center justify-center gap-5 p-6 bg-emerald-700 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-xl shadow-emerald-900/10">
+              <button onClick={() => handleActionFromDay('riego', showDayMenu.date)} className="w-full flex items-center justify-center gap-5 p-6 bg-emerald-700 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">
                 <WaterIcon className="w-6 h-6" /> Registrar Riego
               </button>
-              <button onClick={() => handleActionFromDay('abono', showDayMenu.date)} className="w-full flex items-center justify-center gap-5 p-6 bg-amber-500 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-xl shadow-amber-900/10">
+              <button onClick={() => handleActionFromDay('abono', showDayMenu.date)} className="w-full flex items-center justify-center gap-5 p-6 bg-amber-500 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">
                 <FertilizerIcon className="w-6 h-6" /> Registrar Abono
               </button>
-              <button onClick={() => handleActionFromDay('hidrometria', showDayMenu.date)} className="w-full flex items-center justify-center gap-5 p-6 bg-blue-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-xl shadow-blue-900/10">
-                <InfoIcon className="w-6 h-6" /> Control Hidrometría
-              </button>
             </div>
-            <input 
-              type="file" 
-              accept="image/*" 
-              capture="environment" 
-              ref={hidrometroRef} 
-              className="hidden" 
-              onChange={handleHidrometriaFile} 
-            />
           </div>
-        </div>
-      )}
-
-      {isAnalyzing && !showAddModal && (
-        <div className="fixed inset-0 z-[150] bg-emerald-950/40 backdrop-blur-md flex items-center justify-center">
-           <div className="bg-white p-12 rounded-[3.5rem] flex flex-col items-center shadow-2xl border border-emerald-100">
-              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6"></div>
-              <p className="font-black text-[10px] uppercase tracking-[0.4em] text-emerald-950">Analizando Imágenes...</p>
-           </div>
         </div>
       )}
 
@@ -510,6 +522,7 @@ const App: React.FC = () => {
               <button onClick={toggleFontSize} className="w-full bg-emerald-50 text-emerald-700 py-7 rounded-[2rem] font-black uppercase text-[10px] tracking-widest border border-emerald-100 active:scale-95 transition-all">
                 Modo Lectura: {isLargeFont ? 'ACTIVADO' : 'ESTÁNDAR'}
               </button>
+              <button onClick={handleOpenKeySelector} className="w-full bg-stone-50 text-stone-700 py-7 rounded-[2rem] font-black uppercase text-[10px] tracking-widest border border-stone-100 active:scale-95 transition-all">Cambiar Clave API</button>
               <button onClick={() => { if(confirm("¿Borrar todo el gabinete?")) { localStorage.clear(); window.location.reload(); } }} className="w-full bg-rose-50 text-rose-600 py-7 rounded-[2rem] font-black uppercase text-[10px] tracking-widest border border-rose-100 active:scale-95 transition-all">Purgar Datos</button>
             </div>
             <button onClick={() => setShowSettings(false)} className="mt-12 text-[10px] font-black uppercase text-stone-300 tracking-[0.3em]">Cerrar Panel</button>
