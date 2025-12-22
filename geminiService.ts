@@ -2,11 +2,19 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { GeminiResponse } from "./types";
 
+const getApiKey = () => {
+  try {
+    return process.env.API_KEY || "";
+  } catch (e) {
+    return "";
+  }
+};
+
 export async function analyzePlant(base64Images: string[], currentPotSize?: number): Promise<GeminiResponse> {
-  const apiKey = process.env.API_KEY;
+  const apiKey = getApiKey();
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("API_KEY_MISSING: Por favor, vincula tu clave de API en el menú de configuración.");
+    throw new Error("API_KEY_MISSING: No se detecta clave en el servidor Vercel. Asegúrate de añadirla en Settings > Environment Variables y hacer un nuevo Deploy.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -52,8 +60,8 @@ export async function analyzePlant(base64Images: string[], currentPotSize?: numb
               properties: {
                 estado: { type: Type.STRING }, observaciones: { type: Type.STRING },
                 hidrometria: { type: Type.NUMBER }, analisis_foliar: { type: Type.STRING },
-                riesgo_plagas: { type: Type.STRING }, vigor_index: { type: Type.NUMBER, description: "Porcentaje entero de 0 a 100" },
-                estado_raices: { type: Type.NUMBER, description: "Porcentaje entero de 0 a 100" }
+                riesgo_plagas: { type: Type.STRING }, vigor_index: { type: Type.NUMBER },
+                estado_raices: { type: Type.NUMBER }
               },
               required: ["estado", "observaciones", "analisis_foliar", "vigor_index", "estado_raices"]
             },
@@ -115,14 +123,14 @@ export async function analyzePlant(base64Images: string[], currentPotSize?: numb
   } catch (error: any) {
     console.error("ANALYSIS_ERROR:", error);
     if (error.message?.includes("not found")) {
-      throw new Error("Clave API no válida. Reconfigura el acceso.");
+      throw new Error("Clave API no válida. Asegúrate de que tu API_KEY es correcta en Vercel.");
     }
     throw new Error(error.message || "Error en la telemetría botánica.");
   }
 }
 
 export async function quickHydrometryUpdate(base64Image: string): Promise<number> {
-  const apiKey = process.env.API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) throw new Error("API_KEY_MISSING");
   
   const ai = new GoogleGenAI({ apiKey });
