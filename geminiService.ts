@@ -1,10 +1,19 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { GeminiResponse } from "./types";
 
+/**
+ * Obtiene la clave de API priorizando:
+ * 1. Variables de entorno (Vercel/Sistema)
+ * 2. Almacenamiento local (Configuración manual del usuario)
+ */
 const getApiKey = () => {
   try {
-    return process.env.API_KEY || "";
+    // Intenta obtener la clave de las variables de entorno de Vite/Vercel
+    const systemKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+    if (systemKey && systemKey !== "undefined" && systemKey !== "") return systemKey;
+    
+    // Si no existe, busca la clave que el usuario introdujo manualmente en el navegador
+    return localStorage.getItem('custom_gemini_api_key') || "";
   } catch (e) {
     return "";
   }
@@ -13,133 +22,79 @@ const getApiKey = () => {
 export async function analyzePlant(base64Images: string[], currentPotSize?: number): Promise<GeminiResponse> {
   const apiKey = getApiKey();
   
-  if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("API_KEY_MISSING: No se detecta clave en el servidor Vercel. Asegúrate de añadirla en Settings > Environment Variables y hacer un nuevo Deploy.");
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING");
   }
 
   const ai = new GoogleGenAI({ apiKey });
-
-  const parts = base64Images.map(img => ({
-    inlineData: {
-      data: img.split(',')[1],
-      mimeType: "image/jpeg"
-    }
-  }));
-
-  const prompt = `Actúa como un Arquitecto Botánico Senior y Etnobotánico. Realiza una telemetría completa del espécimen.
-  
-  REGLAS CRÍTICAS DE DATOS:
-  - vigor_index: Debe ser un número ENTERO de 0 a 100 (ej: 85, no 0.85).
-  - estado_raices: Debe ser un número ENTERO de 0 a 100.
-  - hidrometria: Número entero de 0 a 10.
-  
-  CONTENIDO OBLIGATORIO:
-  1. Identificación: Científica y común.
-  2. Biometría: Altura y maceta actual vs potencial máximo.
-  3. Longevidad: Ciclo vital estimado.
-  4. Salud: Análisis foliar y vigor.
-  5. Cuidados: Guía de riego (ml, frecuencia, técnica) y estacionalidad.
-  6. Ficha Botánica: Origen, curiosidades y rasgos morfológicos únicos.`;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: { parts: [...parts, { text: prompt }] },
-      config: { 
+  const model = ai.getGenerativeModel({ 
+    model: "gemini-2.0-flash-exp",
+    generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            identificacion: {
-              type: Type.OBJECT,
-              properties: { cientifico: { type: Type.STRING }, comun: { type: Type.STRING } },
-              required: ["cientifico", "comun"]
-            },
-            salud: {
-              type: Type.OBJECT,
-              properties: {
-                estado: { type: Type.STRING }, observaciones: { type: Type.STRING },
-                hidrometria: { type: Type.NUMBER }, analisis_foliar: { type: Type.STRING },
-                riesgo_plagas: { type: Type.STRING }, vigor_index: { type: Type.NUMBER },
-                estado_raices: { type: Type.NUMBER }
-              },
-              required: ["estado", "observaciones", "analisis_foliar", "vigor_index", "estado_raices"]
-            },
-            medidas_sugeridas: {
-              type: Type.OBJECT,
-              properties: {
-                altura_cm: { type: Type.NUMBER }, maceta_diametro_cm: { type: Type.NUMBER },
-                maceta_altura_cm: { type: Type.NUMBER }, altura_max_especie_cm: { type: Type.NUMBER }
-              },
-              required: ["altura_cm", "maceta_diametro_cm", "altura_max_especie_cm"]
-            },
-            estudio_trasplante: {
-              type: Type.OBJECT,
-              properties: {
-                necesidad: { type: Type.STRING }, maceta_objetivo_cm: { type: Type.NUMBER },
-                proxima_fecha_estimada: { type: Type.STRING }, riesgo_trauma: { type: Type.STRING },
-                analisis_relacion: { type: Type.STRING }
-              },
-              required: ["necesidad", "maceta_objetivo_cm", "proxima_fecha_estimada"]
-            },
-            cuidados: {
-              type: Type.OBJECT,
-              properties: {
-                agua_ml: { type: Type.NUMBER }, frecuencia_dias: { type: Type.NUMBER },
-                luz_optima: { type: Type.STRING }, temp_min: { type: Type.NUMBER },
-                temp_max: { type: Type.NUMBER }, temp_optima: { type: Type.NUMBER },
-                forma_riego: { type: Type.STRING }, cantidad_agua_info: { type: Type.STRING },
-                recomendacion_aspersion: { type: Type.STRING },
-                periodicidad_estacional: {
-                  type: Type.OBJECT,
-                  properties: {
-                    primavera: { type: Type.STRING }, verano: { type: Type.STRING },
-                    otono: { type: Type.STRING }, invierno: { type: Type.STRING }
-                  },
-                  required: ["primavera", "verano", "otono", "invierno"]
-                }
-              },
-              required: ["agua_ml", "frecuencia_dias", "luz_optima", "forma_riego", "cantidad_agua_info", "recomendacion_aspersion", "periodicidad_estacional"]
-            },
-            ficha_botanica: {
-              type: Type.OBJECT,
-              properties: {
-                origen_geografico: { type: Type.STRING }, tipo_hojas: { type: Type.STRING },
-                tipo_raices: { type: Type.STRING }, particularidades: { type: Type.STRING },
-                curiosidades: { type: Type.STRING }, longevidad_estimada: { type: Type.STRING },
-                explicacion_botanica_extensa: { type: Type.STRING }
-              },
-              required: ["origen_geografico", "longevidad_estimada", "explicacion_botanica_extensa", "tipo_hojas", "tipo_raices", "curiosidades", "particularidades"]
-            }
-          },
-          required: ["identificacion", "salud", "medidas_sugeridas", "cuidados", "ficha_botanica", "estudio_trasplante"]
-        }
-      }
-    });
-
-    const text = response.text;
-    if (!text) throw new Error("EMPTY_RESPONSE");
-    return JSON.parse(text.trim()) as GeminiResponse;
-  } catch (error: any) {
-    console.error("ANALYSIS_ERROR:", error);
-    if (error.message?.includes("not found")) {
-      throw new Error("Clave API no válida. Asegúrate de que tu API_KEY es correcta en Vercel.");
     }
-    throw new Error(error.message || "Error en la telemetría botánica.");
-  }
+  });
+
+  const prompt = `Analyze this plant specimen. ${currentPotSize ? `The current pot diameter is ${currentPotSize}cm.` : ''}
+    Return a JSON object following this structure:
+    {
+      "common_name": "Name",
+      "scientific_name": "Name",
+      "family": "Family",
+      "origin": "Region",
+      "description": "Short description",
+      "vigor_index": 0-10,
+      "health_status": "optimal" | "stressed" | "critical",
+      "health_analysis": "Detail the current state",
+      "hydrometry": 0-10,
+      "needs": {
+        "water": "Frequency and method",
+        "light": "Requirements",
+        "temperature": "Ideal range",
+        "substrate": "Type",
+        "fertilizer": "Timing"
+      },
+      "growth_stage": "seedling" | "vegetative" | "flowering" | "mature",
+      "maintenance_tasks": ["task 1", "task 2"],
+      "pot_analysis": {
+        "current_size": ${currentPotSize || 'unknown'},
+        "needs_repotting": boolean,
+        "recommended_size": number (cm),
+        "reason": "Why"
+      }
+    }
+    Be precise, botanical, and professional. Use Spanish for the descriptions and analysis.`;
+
+  const result = await model.generateContent([
+    prompt,
+    ...base64Images.map(inlineData => ({
+      inlineData: {
+        data: inlineData.split(',')[1],
+        mimeType: "image/jpeg"
+      }
+    }))
+  ]);
+
+  const response = await result.response;
+  return JSON.parse(response.text()) as GeminiResponse;
 }
 
-export async function quickHydrometryUpdate(base64Image: string): Promise<number> {
+export async function quickHydrometryUpdate(base64Image: string): Promise<{ hydrometry: number, health_status: string }> {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("API_KEY_MISSING");
-  
+
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: { parts: [
-      { inlineData: { data: base64Image.split(',')[1], mimeType: "image/jpeg" } },
-      { text: "Humedad sustrato 0-10. Solo el número entero." }
-    ] }
+  const model = ai.getGenerativeModel({ 
+    model: "gemini-2.0-flash-exp",
+    generationConfig: { responseMimeType: "application/json" }
   });
-  return parseInt(response.text?.trim() || "5") || 5;
+
+  const prompt = `Analyze only the substrate and visible hydration of this plant. 
+    Return JSON: {"hydrometry": 0-10, "health_status": "optimal"|"stressed"|"critical"}`;
+
+  const result = await model.generateContent([
+    prompt,
+    { inlineData: { data: base64Image.split(',')[1], mimeType: "image/jpeg" } }
+  ]);
+
+  return JSON.parse(result.response.text());
 }
