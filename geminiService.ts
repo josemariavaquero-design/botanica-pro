@@ -1,18 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { GeminiResponse } from "./types";
 
-/**
- * Obtiene la clave de API priorizando:
- * 1. Variables de entorno (Vercel/Sistema)
- * 2. Almacenamiento local (Configuración manual del usuario)
- */
 const getApiKey = () => {
   try {
-    // Intenta obtener la clave de las variables de entorno de Vite/Vercel
+    // Vite usa import.meta.env para las variables de entorno
     const systemKey = import.meta.env.VITE_GEMINI_API_KEY || "";
     if (systemKey && systemKey !== "undefined" && systemKey !== "") return systemKey;
     
-    // Si no existe, busca la clave que el usuario introdujo manualmente en el navegador
+    // Si no hay variable de entorno, busca la clave manual del usuario
     return localStorage.getItem('custom_gemini_api_key') || "";
   } catch (e) {
     return "";
@@ -27,74 +22,60 @@ export async function analyzePlant(base64Images: string[], currentPotSize?: numb
   }
 
   const ai = new GoogleGenAI({ apiKey });
+  
+  // Usamos el modelo estable configurado en tu proyecto
   const model = ai.getGenerativeModel({ 
-    model: "gemini-2.0-flash-exp",
-    generationConfig: {
-        responseMimeType: "application/json",
-    }
+    model: "gemini-1.5-flash",
   });
 
-  const prompt = `Analyze this plant specimen. ${currentPotSize ? `The current pot diameter is ${currentPotSize}cm.` : ''}
-    Return a JSON object following this structure:
-    {
-      "common_name": "Name",
-      "scientific_name": "Name",
-      "family": "Family",
-      "origin": "Region",
-      "description": "Short description",
-      "vigor_index": 0-10,
-      "health_status": "optimal" | "stressed" | "critical",
-      "health_analysis": "Detail the current state",
-      "hydrometry": 0-10,
-      "needs": {
-        "water": "Frequency and method",
-        "light": "Requirements",
-        "temperature": "Ideal range",
-        "substrate": "Type",
-        "fertilizer": "Timing"
-      },
-      "growth_stage": "seedling" | "vegetative" | "flowering" | "mature",
-      "maintenance_tasks": ["task 1", "task 2"],
-      "pot_analysis": {
-        "current_size": ${currentPotSize || 'unknown'},
-        "needs_repotting": boolean,
-        "recommended_size": number (cm),
-        "reason": "Why"
-      }
+  const parts = base64Images.map(img => ({
+    inlineData: {
+      data: img.split(',')[1],
+      mimeType: "image/jpeg"
     }
-    Be precise, botanical, and professional. Use Spanish for the descriptions and analysis.`;
+  }));
 
-  const result = await model.generateContent([
-    prompt,
-    ...base64Images.map(inlineData => ({
-      inlineData: {
-        data: inlineData.split(',')[1],
-        mimeType: "image/jpeg"
+  const prompt = `Actúa como un Arquitecto Botánico Senior. Realiza una telemetría completa del espécimen.
+  ${currentPotSize ? `El diámetro de la maceta actual es de ${currentPotSize}cm.` : ''}
+  
+  REGLAS DE DATOS:
+  - vigor_index: Entero 0-100.
+  - estado_raices: Entero 0-100.
+  - hidrometria: Entero 0-10.
+  
+  Devuelve exclusivamente un JSON con la estructura definida en el esquema.`;
+
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [...parts, { text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
       }
-    }))
-  ]);
+    });
 
-  const response = await result.response;
-  return JSON.parse(response.text()) as GeminiResponse;
+    const text = result.response.text();
+    return JSON.parse(text) as GeminiResponse;
+  } catch (error: any) {
+    console.error("Error en análisis:", error);
+    throw error;
+  }
 }
 
-export async function quickHydrometryUpdate(base64Image: string): Promise<{ hydrometry: number, health_status: string }> {
+export async function quickHydrometryUpdate(base64Image: string): Promise<number> {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("API_KEY_MISSING");
-
+  
   const ai = new GoogleGenAI({ apiKey });
-  const model = ai.getGenerativeModel({ 
-    model: "gemini-2.0-flash-exp",
-    generationConfig: { responseMimeType: "application/json" }
+  const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+  
+  const response = await model.generateContent({
+    contents: [{ 
+      role: "user", 
+      parts: [
+        { inlineData: { data: base64Image.split(',')[1], mimeType: "image/jpeg" } },
+        { text: "Humedad sustrato 0-10. Solo el número entero." }
+      ] 
+    }]
   });
-
-  const prompt = `Analyze only the substrate and visible hydration of this plant. 
-    Return JSON: {"hydrometry": 0-10, "health_status": "optimal"|"stressed"|"critical"}`;
-
-  const result = await model.generateContent([
-    prompt,
-    { inlineData: { data: base64Image.split(',')[1], mimeType: "image/jpeg" } }
-  ]);
-
-  return JSON.parse(result.response.text());
+  return parseInt(response.response.text().trim()) || 5;
 }
