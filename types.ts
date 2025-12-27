@@ -4,11 +4,25 @@ export interface PlantIdentification {
   cientifico: string;
 }
 
+export interface LeafAnalysis {
+  coloracion: string;
+  forma: string;
+  problemas_detectados: string;
+  turgencia: string;
+}
+
+export interface MaintenanceTips {
+  poda: string;
+  limpieza_hojas: string;
+  retirada_hojas_secas: string;
+  otros_consejos: string;
+}
+
 export interface PlantHealth {
   estado: 'óptimo' | 'alerta' | 'crítico';
   observaciones: string;
   hidrometria?: number; 
-  analisis_foliar?: string;
+  analisis_foliar_detallado?: LeafAnalysis;
   riesgo_plagas?: 'bajo' | 'medio' | 'alto';
   vigor_index?: number; 
   estado_raices?: number; 
@@ -41,6 +55,7 @@ export interface PlantCare {
   cantidad_agua_info: string;
   recomendacion_aspersion: string;
   periodicidad_estacional: SeasonalCare;
+  mantenimiento_especifico: MaintenanceTips;
 }
 
 export interface BotanicalDetails {

@@ -1,32 +1,9 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { GeminiResponse } from "./types";
 
-const getApiKey = () => {
-  try {
-    // Vite usa import.meta.env para las variables de entorno
-    const systemKey = import.meta.env.VITE_GEMINI_API_KEY || "";
-    if (systemKey && systemKey !== "undefined" && systemKey !== "") return systemKey;
-    
-    // Si no hay variable de entorno, busca la clave manual del usuario
-    return localStorage.getItem('custom_gemini_api_key') || "";
-  } catch (e) {
-    return "";
-  }
-};
-
 export async function analyzePlant(base64Images: string[], currentPotSize?: number): Promise<GeminiResponse> {
-  const apiKey = getApiKey();
-  
-  if (!apiKey) {
-    throw new Error("API_KEY_MISSING");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
-  
-  // Usamos el modelo estable configurado en tu proyecto
-  const model = ai.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
-  });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const parts = base64Images.map(img => ({
     inlineData: {
@@ -36,46 +13,139 @@ export async function analyzePlant(base64Images: string[], currentPotSize?: numb
   }));
 
   const prompt = `Actúa como un Arquitecto Botánico Senior. Realiza una telemetría completa del espécimen.
-  ${currentPotSize ? `El diámetro de la maceta actual es de ${currentPotSize}cm.` : ''}
   
   REGLAS DE DATOS:
-  - vigor_index: Entero 0-100.
-  - estado_raices: Entero 0-100.
-  - hidrometria: Entero 0-10.
+  - vigor_index: Número entero 0-100.
+  - estado_raices: Número entero 0-100.
+  - hidrometria: Número entero 0-10.
   
-  Devuelve exclusivamente un JSON con la estructura definida en el esquema.`;
+  ENFOQUE ESPECIAL:
+  1. Análisis Foliar Profundo: Evalúa coloración, forma de las hojas, problemas detectados y turgencia.
+  2. Biometría: Estima altura total, tallos y dimensiones de maceta.
+  3. Mantenimiento Maestro: Incluye consejos específicos sobre:
+     - Poda (cómo y cuándo).
+     - Limpieza de hojas (método óptimo).
+     - Retirada de hojas (identificación y técnica).
+     - Otros tips específicos de la especie.`;
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [...parts, { text: prompt }] }],
-      generationConfig: {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: { parts: [...parts, { text: prompt }] },
+      config: { 
         responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            identificacion: {
+              type: Type.OBJECT,
+              properties: { cientifico: { type: Type.STRING }, comun: { type: Type.STRING } },
+              required: ["cientifico", "comun"]
+            },
+            salud: {
+              type: Type.OBJECT,
+              properties: {
+                estado: { type: Type.STRING }, 
+                observaciones: { type: Type.STRING },
+                hidrometria: { type: Type.NUMBER },
+                analisis_foliar_detallado: {
+                  type: Type.OBJECT,
+                  properties: {
+                    coloracion: { type: Type.STRING },
+                    forma: { type: Type.STRING },
+                    problemas_detectados: { type: Type.STRING },
+                    turgencia: { type: Type.STRING }
+                  },
+                  required: ["coloracion", "forma", "problemas_detectados", "turgencia"]
+                },
+                riesgo_plagas: { type: Type.STRING }, 
+                vigor_index: { type: Type.NUMBER },
+                estado_raices: { type: Type.NUMBER }
+              },
+              required: ["estado", "observaciones", "analisis_foliar_detallado", "vigor_index", "estado_raices"]
+            },
+            medidas_sugeridas: {
+              type: Type.OBJECT,
+              properties: {
+                altura_cm: { type: Type.NUMBER }, 
+                longitud_max_tallo_cm: { type: Type.NUMBER },
+                maceta_diametro_cm: { type: Type.NUMBER },
+                maceta_altura_cm: { type: Type.NUMBER }, 
+                altura_max_especie_cm: { type: Type.NUMBER }
+              },
+              required: ["altura_cm", "maceta_diametro_cm", "altura_max_especie_cm"]
+            },
+            estudio_trasplante: {
+              type: Type.OBJECT,
+              properties: {
+                necesidad: { type: Type.STRING }, maceta_objetivo_cm: { type: Type.NUMBER },
+                proxima_fecha_estimada: { type: Type.STRING }, riesgo_trauma: { type: Type.STRING },
+                analisis_relacion: { type: Type.STRING }
+              },
+              required: ["necesidad", "maceta_objetivo_cm", "proxima_fecha_estimada"]
+            },
+            cuidados: {
+              type: Type.OBJECT,
+              properties: {
+                agua_ml: { type: Type.NUMBER }, frecuencia_dias: { type: Type.NUMBER },
+                luz_optima: { type: Type.STRING }, temp_min: { type: Type.NUMBER },
+                temp_max: { type: Type.NUMBER }, temp_optima: { type: Type.NUMBER },
+                forma_riego: { type: Type.STRING }, cantidad_agua_info: { type: Type.STRING },
+                recomendacion_aspersion: { type: Type.STRING },
+                periodicidad_estacional: {
+                  type: Type.OBJECT,
+                  properties: {
+                    primavera: { type: Type.STRING }, verano: { type: Type.STRING },
+                    otono: { type: Type.STRING }, invierno: { type: Type.STRING }
+                  },
+                  required: ["primavera", "verano", "otono", "invierno"]
+                },
+                mantenimiento_especifico: {
+                  type: Type.OBJECT,
+                  properties: {
+                    poda: { type: Type.STRING },
+                    limpieza_hojas: { type: Type.STRING },
+                    retirada_hojas_secas: { type: Type.STRING },
+                    otros_consejos: { type: Type.STRING }
+                  },
+                  required: ["poda", "limpieza_hojas", "retirada_hojas_secas", "otros_consejos"]
+                }
+              },
+              required: ["agua_ml", "frecuencia_dias", "luz_optima", "forma_riego", "cantidad_agua_info", "recomendacion_aspersion", "periodicidad_estacional", "mantenimiento_especifico"]
+            },
+            ficha_botanica: {
+              type: Type.OBJECT,
+              properties: {
+                origen_geografico: { type: Type.STRING }, tipo_hojas: { type: Type.STRING },
+                tipo_raices: { type: Type.STRING }, particularidades: { type: Type.STRING },
+                curiosidades: { type: Type.STRING }, longevidad_estimada: { type: Type.STRING },
+                explicacion_botanica_extensa: { type: Type.STRING }
+              },
+              required: ["origen_geografico", "longevidad_estimada", "explicacion_botanica_extensa", "tipo_hojas", "tipo_raices", "curiosidades", "particularidades"]
+            }
+          },
+          required: ["identificacion", "salud", "medidas_sugeridas", "cuidados", "ficha_botanica", "estudio_trasplante"]
+        }
       }
     });
 
-    const text = result.response.text();
-    return JSON.parse(text) as GeminiResponse;
+    const text = response.text;
+    if (!text) throw new Error("La IA devolvió una respuesta vacía.");
+    return JSON.parse(text.trim()) as GeminiResponse;
   } catch (error: any) {
-    console.error("Error en análisis:", error);
-    throw error;
+    console.error("Gemini Error:", error);
+    throw new Error(error.message || "Error en el análisis botánico.");
   }
 }
 
 export async function quickHydrometryUpdate(base64Image: string): Promise<number> {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  
-  const ai = new GoogleGenAI({ apiKey });
-  const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-  
-  const response = await model.generateContent({
-    contents: [{ 
-      role: "user", 
-      parts: [
-        { inlineData: { data: base64Image.split(',')[1], mimeType: "image/jpeg" } },
-        { text: "Humedad sustrato 0-10. Solo el número entero." }
-      ] 
-    }]
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: { parts: [
+      { inlineData: { data: base64Image.split(',')[1], mimeType: "image/jpeg" } },
+      { text: "Nivel de humedad 0-10 (solo el número)." }
+    ] }
   });
-  return parseInt(response.response.text().trim()) || 5;
+  return parseInt(response.text?.trim() || "5") || 5;
 }
