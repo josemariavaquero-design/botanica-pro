@@ -6,6 +6,19 @@ import { analyzePlant, quickHydrometryUpdate } from './geminiService';
 import { CameraIcon, PlusIcon, WaterIcon, HistoryIcon, InfoIcon, FertilizerIcon, TrashIcon } from './components/Icons';
 import PlantCalendar from './components/PlantCalendar';
 
+// Declaración de tipos para las funciones globales de AI Studio
+// Se define la interfaz AIStudio para coincidir con el tipo esperado por el entorno
+interface AIStudio {
+  hasSelectedApiKey: () => Promise<boolean>;
+  openSelectKey: () => Promise<void>;
+}
+
+declare global {
+  interface Window {
+    aistudio: AIStudio;
+  }
+}
+
 type TabType = 'tipologia' | 'botanica' | 'mantenimiento' | 'historial';
 
 const LOCATIONS = ["Salón", "Terraza", "Oficina", "Cocina", "Dormitorio", "Baño", "Pasillo", "Exterior", "Personalizado..."];
@@ -38,6 +51,7 @@ const HealthGauge: React.FC<{ vigor: number, size?: number }> = ({ vigor, size =
 };
 
 const App: React.FC = () => {
+  const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [plants, setPlants] = useState<PlantData[]>([]);
   const [selectedPlant, setSelectedPlant] = useState<PlantData | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('tipologia');
@@ -61,8 +75,24 @@ const App: React.FC = () => {
   const hidrometroRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    checkKeyStatus();
     setPlants(getPlants());
   }, []);
+
+  const checkKeyStatus = async () => {
+    try {
+      const selected = await window.aistudio.hasSelectedApiKey();
+      setHasKey(selected);
+    } catch (e) {
+      setHasKey(false);
+    }
+  };
+
+  const handleSelectKey = async () => {
+    await window.aistudio.openSelectKey();
+    // Procedemos directamente como indica el SDK para evitar race conditions
+    setHasKey(true);
+  };
 
   useEffect(() => {
     if (selectedPlant) {
@@ -173,7 +203,13 @@ const App: React.FC = () => {
       setManualPotDiam(result.medidas_sugeridas.maceta_diametro_cm);
       setManualPotHeight(result.medidas_sugeridas.maceta_altura_cm || 0);
     } catch (error: any) { 
-      alert("Error IA: " + (error.message || "No se pudo completar el análisis."));
+      // Manejo de errores específicos de la API según guías
+      if (error.message.includes("API Key") || error.message.includes("auth") || error.message.includes("Requested entity was not found")) {
+        setHasKey(false);
+        alert("Sesión de API expirada o no configurada. Por favor, selecciona una clave de nuevo.");
+      } else {
+        alert("Error IA: " + error.message);
+      }
     } finally { 
       setIsAnalyzing(false); 
     }
@@ -212,6 +248,41 @@ const App: React.FC = () => {
       setIsSaving(false);
     }
   };
+
+  if (hasKey === false) {
+    return (
+      <div className="min-h-screen bg-[#faf9f6] flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+        <div className="max-w-xs space-y-8">
+          <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto shadow-sm">
+            <InfoIcon className="w-10 h-10 text-emerald-700" />
+          </div>
+          <div className="space-y-4">
+            <h1 className="font-serif text-3xl italic text-emerald-950">Acceso al Gabinete</h1>
+            <p className="text-stone-500 text-sm leading-relaxed">
+              Para habilitar los protocolos de análisis IA, debes vincular tu clave de 
+              <span className="font-bold"> Google Gemini</span> desde un proyecto con facturación habilitada.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <button 
+              onClick={handleSelectKey}
+              className="w-full bg-emerald-700 text-white py-5 rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all"
+            >
+              Vincular API Key
+            </button>
+            <a 
+              href="https://ai.google.dev/gemini-api/docs/billing" 
+              target="_blank" 
+              rel="noreferrer"
+              className="block text-[9px] font-bold text-stone-300 uppercase tracking-tighter hover:text-emerald-600 transition-colors"
+            >
+              Consultar Guía de Facturación
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const headingSize = isLargeFont ? 'text-4xl' : 'text-3xl';
   const smallTextSize = isLargeFont ? 'text-xs' : 'text-[10px]';
@@ -362,7 +433,6 @@ const App: React.FC = () => {
               <div className="space-y-10 animate-fade-in">
                 <PlantCalendar plant={selectedPlant} onSelectDate={(d) => setShowDayMenu({ date: d })} />
                 
-                {/* Consejos de Mantenimiento Específico */}
                 {selectedPlant.cuidados.mantenimiento_especifico && (
                   <div className="bg-white p-8 rounded-[3.5rem] border border-stone-100 shadow-sm space-y-10">
                     <h4 className="font-serif italic text-2xl text-emerald-950 border-b border-stone-50 pb-4">Protocolos Maestros</h4>
@@ -456,7 +526,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Biometría Manual */}
       {showBiometryModal && selectedPlant && (
         <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
           <div className="bg-white w-full rounded-[4rem] p-10 shadow-2xl space-y-8 animate-slide-up">
