@@ -12,21 +12,21 @@ export async function analyzePlant(base64Images: string[], currentPotSize?: numb
     }
   }));
 
-  const prompt = `Actúa como un Arquitecto Botánico Senior. Realiza una telemetría completa del espécimen.
+  const prompt = `Actúa como un Arquitecto Botánico Senior y Curador de Jardines Reales. 
+  Realiza una telemetría avanzada y diagnóstico del espécimen basado en las imágenes.
   
-  REGLAS DE DATOS:
-  - vigor_index: Número entero 0-100.
-  - estado_raices: Número entero 0-100.
-  - hidrometria: Número entero 0-10.
+  REGLAS TÉCNICAS:
+  - vigor_index y estado_raices: 0-100.
+  - hidrometria: 0-10.
   
-  ENFOQUE ESPECIAL:
-  1. Análisis Foliar Profundo: Evalúa coloración, forma de las hojas, problemas detectados y turgencia.
-  2. Biometría: Estima altura total, tallos y dimensiones de maceta.
-  3. Mantenimiento Maestro: Incluye consejos específicos sobre:
-     - Poda (cómo y cuándo).
-     - Limpieza de hojas (método óptimo).
-     - Retirada de hojas (identificación y técnica).
-     - Otros tips específicos de la especie.`;
+  ENFOQUE CRÍTICO:
+  1. ANÁLISIS FOLIAR: Detalla coloración, turgencia y anomalías visibles.
+  2. BIOMETRÍA: Estima altura total, longitud de tallos principales y medidas de maceta.
+  3. MANTENIMIENTO MAESTRO (Protocolos): Proporciona instrucciones específicas sobre:
+     - Poda: Técnica exacta, herramientas y época ideal.
+     - Limpieza: Método para mantener las hojas libres de polvo (paño húmedo, lluvia, etc.).
+     - Retirada de Hojas: Cómo identificar hojas que drenan energía y cómo removerlas sin trauma.
+     - Tips de Oro: Secretos de cultivo para esta especie específica.`;
 
   try {
     const response = await ai.models.generateContent({

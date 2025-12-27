@@ -223,7 +223,7 @@ const App: React.FC = () => {
           <h1 className={`font-serif ${headingSize} text-emerald-950 tracking-tight italic`}>Botanica <span className="text-emerald-600 font-sans font-black not-italic">PRO</span></h1>
           <p className={`${smallTextSize} text-emerald-800/50 font-black tracking-[0.25em] uppercase mt-1`}>Archivo Bio-Cronológico</p>
         </div>
-        <button onClick={() => { setAnalysisResult(null); setCapturedImages([]); setShowAddModal(true); }} className="bg-emerald-700 text-white p-4 rounded-full shadow-2xl active:scale-95">
+        <button onClick={() => { setAnalysisResult(null); setCapturedImages([]); setShowAddModal(true); }} className="bg-emerald-700 text-white p-4 rounded-full shadow-2xl active:scale-95 transition-all">
           <PlusIcon className="w-6 h-6" />
         </button>
       </header>
@@ -251,7 +251,7 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-white flex flex-col animate-slide-up">
           <div className="relative h-[25vh] shrink-0 overflow-hidden">
             <img src={selectedPlant.images[0]?.url} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-t-t from-white via-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent"></div>
             <button onClick={() => setSelectedPlant(null)} className="absolute top-10 left-6 bg-white/40 p-3 rounded-full"><PlusIcon className="w-5 h-5 rotate-45" /></button>
             <div className="absolute bottom-6 left-8">
               <h2 className={`font-serif ${headingSize} italic text-emerald-950`}>{selectedPlant.identificacion.cientifico}</h2>
@@ -285,34 +285,34 @@ const App: React.FC = () => {
                 <div className="bg-emerald-900 p-10 rounded-[4rem] text-white shadow-xl">
                   <div className="flex justify-between items-start mb-8">
                     <h3 className="font-serif italic text-2xl">Salud y Biometría</h3>
-                    <button onClick={() => setShowBiometryModal(true)} className="bg-white/10 p-2 px-4 rounded-xl text-[9px] font-black uppercase border border-white/5">Editar</button>
+                    <button onClick={() => setShowBiometryModal(true)} className="bg-white/10 p-2 px-4 rounded-xl text-[9px] font-black uppercase border border-white/5 active:bg-white/20 transition-all">Editar</button>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-6 mb-8">
                     <div className="bg-white/5 p-5 rounded-3xl border border-white/5">
-                      <span className={`${smallTextSize} uppercase font-black opacity-40`}>Altura</span>
+                      <span className={`${smallTextSize} uppercase font-black opacity-40`}>Altura Total</span>
                       <p className={`${isLargeFont ? 'text-3xl' : 'text-2xl'} font-black`}>{(selectedPlant.medidas_usuario?.altura_cm || selectedPlant.medidas_sugeridas.altura_cm)}cm</p>
                     </div>
                     <div className="bg-white/5 p-5 rounded-3xl border border-white/5">
-                      <span className={`${smallTextSize} uppercase font-black opacity-40`}>Tallo Max.</span>
+                      <span className={`${smallTextSize} uppercase font-black opacity-40`}>Tallo Principal</span>
                       <p className={`${isLargeFont ? 'text-3xl' : 'text-2xl'} font-black`}>{(selectedPlant.medidas_usuario?.longitud_max_tallo_cm || selectedPlant.medidas_sugeridas.longitud_max_tallo_cm || 0)}cm</p>
                     </div>
                   </div>
 
                   {selectedPlant.salud.analisis_foliar_detallado && (
-                    <div className="bg-white/10 p-6 rounded-3xl mb-8 space-y-4 border border-white/5">
-                      <h4 className={`${smallTextSize} uppercase font-black text-emerald-300 tracking-widest`}>Análisis Foliar</h4>
-                      <div className="grid grid-cols-2 gap-4 text-[11px]">
-                        <div><p className="opacity-40 uppercase font-black mb-1">Coloración</p><p>{selectedPlant.salud.analisis_foliar_detallado.coloracion}</p></div>
-                        <div><p className="opacity-40 uppercase font-black mb-1">Turgencia</p><p>{selectedPlant.salud.analisis_foliar_detallado.turgencia}</p></div>
-                        <div className="col-span-2"><p className="opacity-40 uppercase font-black mb-1">Hallazgos</p><p>{selectedPlant.salud.analisis_foliar_detallado.problemas_detectados}</p></div>
+                    <div className="bg-white/10 p-6 rounded-3xl mb-8 space-y-4 border border-white/5 shadow-inner">
+                      <h4 className={`${smallTextSize} uppercase font-black text-emerald-300 tracking-widest`}>Estado del Follaje</h4>
+                      <div className="grid grid-cols-2 gap-4 text-[11px] leading-relaxed">
+                        <div><p className="opacity-40 uppercase font-black mb-1">Coloración</p><p className="font-medium">{selectedPlant.salud.analisis_foliar_detallado.coloracion}</p></div>
+                        <div><p className="opacity-40 uppercase font-black mb-1">Turgencia</p><p className="font-medium">{selectedPlant.salud.analisis_foliar_detallado.turgencia}</p></div>
+                        <div className="col-span-2 border-t border-white/5 pt-2 mt-2"><p className="opacity-40 uppercase font-black mb-1">Problemas Detectados</p><p className="text-emerald-100 font-serif italic">{selectedPlant.salud.analisis_foliar_detallado.problemas_detectados}</p></div>
                       </div>
                     </div>
                   )}
                   
                   <div className="bg-white/5 p-8 rounded-[3rem] border border-white/10">
                     <div className="flex justify-between items-center mb-4">
-                      <span className={`${smallTextSize} uppercase font-black opacity-40`}>Nivel Hidrometría</span>
+                      <span className={`${smallTextSize} uppercase font-black opacity-40`}>Hidrometría (Sustrato)</span>
                       <span className="text-xl font-black text-emerald-400">{selectedPlant.salud.hidrometria || 0}/10</span>
                     </div>
                     <input 
@@ -338,11 +338,11 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-stone-50 p-4 rounded-3xl">
                         <span className={`${smallTextSize} uppercase font-black text-stone-300 block mb-1`}>Longevidad</span>
-                        <p className="font-bold text-emerald-900">{selectedPlant.ficha_botanica.longevidad_estimada}</p>
+                        <p className="font-bold text-emerald-900 leading-tight">{selectedPlant.ficha_botanica.longevidad_estimada}</p>
                       </div>
                       <div className="bg-stone-50 p-4 rounded-3xl">
                         <span className={`${smallTextSize} uppercase font-black text-stone-300 block mb-1`}>Origen</span>
-                        <p className="font-bold text-emerald-900">{selectedPlant.ficha_botanica.origen_geografico}</p>
+                        <p className="font-bold text-emerald-900 leading-tight">{selectedPlant.ficha_botanica.origen_geografico}</p>
                       </div>
                     </div>
                     <div className="bg-emerald-50 p-8 rounded-[3rem] border border-emerald-100">
@@ -364,55 +364,57 @@ const App: React.FC = () => {
                 
                 {/* Consejos de Mantenimiento Específico */}
                 {selectedPlant.cuidados.mantenimiento_especifico && (
-                  <div className="bg-white p-8 rounded-[3.5rem] border border-stone-100 shadow-sm space-y-8">
+                  <div className="bg-white p-8 rounded-[3.5rem] border border-stone-100 shadow-sm space-y-10">
                     <h4 className="font-serif italic text-2xl text-emerald-950 border-b border-stone-50 pb-4">Protocolos Maestros</h4>
                     
-                    <div className="space-y-6">
-                      <div className="flex gap-4">
-                        <div className="bg-emerald-100 text-emerald-700 p-3 rounded-2xl h-fit self-start"><PlusIcon className="w-5 h-5" /></div>
+                    <div className="space-y-8">
+                      <div className="flex gap-5">
+                        <div className="bg-emerald-100 text-emerald-700 p-4 rounded-2xl h-fit self-start shadow-sm"><PlusIcon className="w-5 h-5" /></div>
                         <div>
-                          <p className={`${smallTextSize} font-black uppercase text-emerald-700/50 mb-1`}>Poda Técnica</p>
-                          <p className="text-stone-700 leading-relaxed">{selectedPlant.cuidados.mantenimiento_especifico.poda}</p>
+                          <p className={`${smallTextSize} font-black uppercase text-emerald-700/50 mb-2 tracking-tighter`}>Técnica de Poda</p>
+                          <p className="text-stone-700 text-sm leading-relaxed">{selectedPlant.cuidados.mantenimiento_especifico.poda}</p>
                         </div>
                       </div>
 
-                      <div className="flex gap-4">
-                        <div className="bg-blue-100 text-blue-700 p-3 rounded-2xl h-fit self-start"><InfoIcon className="w-5 h-5" /></div>
+                      <div className="flex gap-5">
+                        <div className="bg-blue-100 text-blue-700 p-4 rounded-2xl h-fit self-start shadow-sm"><InfoIcon className="w-5 h-5" /></div>
                         <div>
-                          <p className={`${smallTextSize} font-black uppercase text-blue-700/50 mb-1`}>Limpieza de Hojas</p>
-                          <p className="text-stone-700 leading-relaxed">{selectedPlant.cuidados.mantenimiento_especifico.limpieza_hojas}</p>
+                          <p className={`${smallTextSize} font-black uppercase text-blue-700/50 mb-2 tracking-tighter`}>Limpieza de Hojas</p>
+                          <p className="text-stone-700 text-sm leading-relaxed">{selectedPlant.cuidados.mantenimiento_especifico.limpieza_hojas}</p>
                         </div>
                       </div>
 
-                      <div className="flex gap-4">
-                        <div className="bg-amber-100 text-amber-700 p-3 rounded-2xl h-fit self-start"><TrashIcon className="w-5 h-5" /></div>
+                      <div className="flex gap-5">
+                        <div className="bg-amber-100 text-amber-700 p-4 rounded-2xl h-fit self-start shadow-sm"><TrashIcon className="w-5 h-5" /></div>
                         <div>
-                          <p className={`${smallTextSize} font-black uppercase text-amber-700/50 mb-1`}>Retirada de Material Seco</p>
-                          <p className="text-stone-700 leading-relaxed">{selectedPlant.cuidados.mantenimiento_especifico.retirada_hojas_secas}</p>
+                          <p className={`${smallTextSize} font-black uppercase text-amber-700/50 mb-2 tracking-tighter`}>Retirada de Material Muerto</p>
+                          <p className="text-stone-700 text-sm leading-relaxed">{selectedPlant.cuidados.mantenimiento_especifico.retirada_hojas_secas}</p>
                         </div>
                       </div>
 
-                      <div className="bg-stone-50 p-6 rounded-[2.5rem] border border-stone-100 mt-4">
-                        <p className={`${smallTextSize} font-black uppercase text-stone-400 mb-2`}>Otros Tips de Cultivo</p>
-                        <p className="text-stone-600 italic font-serif leading-relaxed text-sm">{selectedPlant.cuidados.mantenimiento_especifico.otros_consejos}</p>
+                      <div className="bg-emerald-50/50 p-6 rounded-[2.5rem] border border-emerald-100/50 mt-4 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-5"><InfoIcon className="w-12 h-12" /></div>
+                        <p className={`${smallTextSize} font-black uppercase text-emerald-800/40 mb-3`}>Secretos de Cultivo</p>
+                        <p className="text-emerald-900 italic font-serif leading-relaxed text-sm">"{selectedPlant.cuidados.mantenimiento_especifico.otros_consejos}"</p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div className="bg-emerald-950 p-8 rounded-[3.5rem] text-white shadow-2xl">
-                   <h4 className="font-serif italic text-2xl text-emerald-300 mb-8">Manual de Hidratación</h4>
-                   <div className="space-y-8">
+                <div className="bg-emerald-950 p-8 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
+                   <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+                   <h4 className="font-serif italic text-2xl text-emerald-300 mb-8 relative z-10">Manual de Hidratación</h4>
+                   <div className="space-y-8 relative z-10">
                       <div>
-                        <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-3`}>Técnica</span>
-                        <p className="opacity-90 bg-white/5 p-5 rounded-3xl">{selectedPlant.cuidados.forma_riego}</p>
+                        <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-3`}>Técnica Recomendada</span>
+                        <p className="opacity-90 bg-white/5 p-6 rounded-3xl border border-white/5 text-sm">{selectedPlant.cuidados.forma_riego}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/5 p-5 rounded-3xl">
+                        <div className="bg-white/5 p-5 rounded-3xl border border-white/5">
                            <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-2`}>Caudal</span>
                            <p className="text-xl font-black">{selectedPlant.cuidados.agua_ml} ml</p>
                         </div>
-                        <div className="bg-white/5 p-5 rounded-3xl">
+                        <div className="bg-white/5 p-5 rounded-3xl border border-white/5">
                            <span className={`${smallTextSize} font-black uppercase text-emerald-500 block mb-2`}>Frecuencia</span>
                            <p className="text-xl font-black">c/ {selectedPlant.cuidados.frecuencia_dias} días</p>
                         </div>
@@ -431,7 +433,7 @@ const App: React.FC = () => {
                   ...(selectedPlant.historial_hidrometria || []).map((h, idx) => ({ date: h.fecha, type: 'hidrometria', val: h.valor, index: idx }))
                 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .map((item: any, i) => (
-                  <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 flex items-center justify-between shadow-sm">
+                  <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 flex items-center justify-between shadow-sm active:scale-95 transition-all">
                     <div className="flex items-center gap-4">
                       <div className={`p-4 rounded-2xl ${item.type === 'riego' ? 'bg-blue-50 text-blue-600' : item.type === 'abono' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
                         {item.type === 'riego' ? <WaterIcon className="w-5 h-5" /> : item.type === 'abono' ? <FertilizerIcon className="w-5 h-5" /> : <InfoIcon className="w-5 h-5" />}
@@ -443,7 +445,7 @@ const App: React.FC = () => {
                         <p className="text-xs text-stone-300 mt-1">{new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</p>
                       </div>
                     </div>
-                    <button onClick={() => deleteHistoryItem(item.type as any, item.index)} className="p-3 text-stone-200 hover:text-rose-500">
+                    <button onClick={() => deleteHistoryItem(item.type as any, item.index)} className="p-3 text-stone-200 hover:text-rose-500 transition-colors">
                       <TrashIcon className="w-5 h-5" />
                     </button>
                   </div>
@@ -457,29 +459,29 @@ const App: React.FC = () => {
       {/* Modal de Biometría Manual */}
       {showBiometryModal && selectedPlant && (
         <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-white w-full rounded-[4rem] p-10 shadow-2xl space-y-8">
+          <div className="bg-white w-full rounded-[4rem] p-10 shadow-2xl space-y-8 animate-slide-up">
             <h3 className="font-serif text-3xl italic text-emerald-950 text-center">Biometría Detallada</h3>
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="text-[10px] font-black uppercase text-stone-300 block mb-2">Altura Planta (cm)</label>
-                <input type="number" value={manualHeight} onChange={e => setManualHeight(Number(e.target.value))} className="w-full bg-stone-50 border-stone-200 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                <input type="number" value={manualHeight} onChange={e => setManualHeight(Number(e.target.value))} className="w-full bg-stone-50 border border-stone-200 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase text-stone-300 block mb-2">Tallo más Largo (cm)</label>
-                <input type="number" value={manualStem} onChange={e => setManualStem(Number(e.target.value))} className="w-full bg-stone-50 border-stone-200 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                <label className="text-[10px] font-black uppercase text-stone-300 block mb-2">Longitud Tallo (cm)</label>
+                <input type="number" value={manualStem} onChange={e => setManualStem(Number(e.target.value))} className="w-full bg-stone-50 border border-stone-200 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" />
               </div>
               <div>
                 <label className="text-[10px] font-black uppercase text-stone-300 block mb-2">Diámetro Maceta (cm)</label>
-                <input type="number" value={manualPotDiam} onChange={e => setManualPotDiam(Number(e.target.value))} className="w-full bg-stone-50 border-stone-200 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                <input type="number" value={manualPotDiam} onChange={e => setManualPotDiam(Number(e.target.value))} className="w-full bg-stone-50 border border-stone-200 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" />
               </div>
               <div>
                 <label className="text-[10px] font-black uppercase text-stone-300 block mb-2">Altura Maceta (cm)</label>
-                <input type="number" value={manualPotHeight} onChange={e => setManualPotHeight(Number(e.target.value))} className="w-full bg-stone-50 border-stone-200 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                <input type="number" value={manualPotHeight} onChange={e => setManualPotHeight(Number(e.target.value))} className="w-full bg-stone-50 border border-stone-200 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" />
               </div>
             </div>
             <div className="flex gap-4 pt-4">
-              <button onClick={() => setShowBiometryModal(false)} className="flex-1 bg-stone-100 py-6 rounded-3xl font-black uppercase text-[10px] tracking-widest text-stone-500">Cancelar</button>
-              <button onClick={saveManualBiometry} className="flex-1 bg-emerald-700 text-white py-6 rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95">Guardar Datos</button>
+              <button onClick={() => setShowBiometryModal(false)} className="flex-1 bg-stone-100 py-6 rounded-3xl font-black uppercase text-[10px] tracking-widest text-stone-500 active:bg-stone-200 transition-colors">Cancelar</button>
+              <button onClick={saveManualBiometry} className="flex-1 bg-emerald-700 text-white py-6 rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-emerald-200 active:scale-95 transition-all">Guardar Datos</button>
             </div>
           </div>
         </div>
@@ -488,21 +490,21 @@ const App: React.FC = () => {
       {showAddModal && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md flex items-end">
           <div className="bg-white w-full rounded-t-[5rem] p-10 min-h-[95vh] flex flex-col relative animate-slide-up overflow-y-auto">
-            <button onClick={() => setShowAddModal(false)} className="absolute top-12 right-12 text-stone-300"><PlusIcon className="w-10 h-10 rotate-45" /></button>
+            <button onClick={() => setShowAddModal(false)} className="absolute top-12 right-12 text-stone-300 active:text-emerald-700 transition-colors"><PlusIcon className="w-10 h-10 rotate-45" /></button>
             {!analysisResult && !isAnalyzing ? (
               <div className="flex-1 flex flex-col pt-12">
                 <h2 className="text-4xl font-serif italic text-center mb-12 text-emerald-950">Nuevo Espécimen</h2>
                 <div className="grid grid-cols-3 gap-4 mb-12">
                   {capturedImages.map((img, i) => <img key={i} src={img} className="aspect-square object-cover rounded-[2.5rem] shadow-sm border border-stone-100" />)}
                   {capturedImages.length < 3 && (
-                    <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-stone-200 rounded-[2.5rem] cursor-pointer hover:bg-stone-50 transition-all">
+                    <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-stone-200 rounded-[2.5rem] cursor-pointer hover:bg-stone-50 hover:border-emerald-300 transition-all">
                       <CameraIcon className="w-12 h-12 text-stone-200" />
                       <input type="file" multiple accept="image/*" onChange={handleFileSelection} className="hidden" />
                     </label>
                   )}
                 </div>
                 <div className="mt-auto space-y-6">
-                  <div className="bg-stone-50 p-8 rounded-[3rem] border border-stone-100">
+                  <div className="bg-stone-50 p-8 rounded-[3rem] border border-stone-100 focus-within:border-emerald-200 transition-all">
                     <span className={`${smallTextSize} font-black uppercase text-stone-300 block mb-3 tracking-widest`}>Ubicación Designada</span>
                     <select 
                       value={manualLocation} 
@@ -529,7 +531,7 @@ const App: React.FC = () => {
               </div>
             ) : (
               <div className="flex-1 pt-12 space-y-10">
-                <div className="bg-emerald-950 text-white p-10 rounded-[4rem] text-center shadow-2xl">
+                <div className="bg-emerald-950 text-white p-10 rounded-[4rem] text-center shadow-2xl border border-emerald-800">
                   <h3 className="font-serif text-4xl italic text-emerald-300 mb-2 leading-tight">{analysisResult.identificacion.cientifico}</h3>
                   <p className="text-emerald-500 uppercase font-black tracking-widest text-[10px]">{analysisResult.identificacion.comun}</p>
                 </div>
@@ -542,19 +544,19 @@ const App: React.FC = () => {
 
       {showDayMenu && (
         <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md flex items-center justify-center p-8">
-          <div className="bg-white w-full max-w-sm rounded-[4.5rem] p-12 relative shadow-2xl border border-stone-50">
-            <button onClick={() => setShowDayMenu(null)} className="absolute top-10 right-10 text-stone-300"><PlusIcon className="w-8 h-8 rotate-45" /></button>
-            <h3 className="font-serif text-3xl italic text-center mb-10 text-emerald-950">Evento Botánico</h3>
+          <div className="bg-white w-full max-w-sm rounded-[4.5rem] p-12 relative shadow-2xl border border-stone-50 animate-slide-up">
+            <button onClick={() => setShowDayMenu(null)} className="absolute top-10 right-10 text-stone-300 active:text-emerald-700"><PlusIcon className="w-8 h-8 rotate-45" /></button>
+            <h3 className="font-serif text-3xl italic text-center mb-10 text-emerald-950">Evento de Cuidado</h3>
             <div className="space-y-4">
-              <button onClick={() => handleActionFromDay('riego', showDayMenu.date)} className="w-full flex items-center justify-between p-6 bg-emerald-700 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">
+              <button onClick={() => handleActionFromDay('riego', showDayMenu.date)} className="w-full flex items-center justify-between p-6 bg-emerald-700 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-lg shadow-emerald-200">
                 <div className="flex items-center gap-4"><WaterIcon className="w-6 h-6" /> Registrar Riego</div>
                 <div className="bg-white/20 px-3 py-1 rounded-full text-[8px]">Ok</div>
               </button>
               <div className="grid grid-cols-1 gap-2">
-                <button onClick={() => handleActionFromDay('abono', showDayMenu.date, 'líquido')} className="w-full flex items-center justify-center gap-4 p-5 bg-amber-500 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">
+                <button onClick={() => handleActionFromDay('abono', showDayMenu.date, 'líquido')} className="w-full flex items-center justify-center gap-4 p-5 bg-amber-500 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-lg shadow-amber-100">
                   <FertilizerIcon className="w-6 h-6" /> Abono Líquido
                 </button>
-                <button onClick={() => handleActionFromDay('abono', showDayMenu.date, 'barritas')} className="w-full flex items-center justify-center gap-4 p-5 bg-amber-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">
+                <button onClick={() => handleActionFromDay('abono', showDayMenu.date, 'barritas')} className="w-full flex items-center justify-center gap-4 p-5 bg-amber-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-lg shadow-amber-200">
                   <FertilizerIcon className="w-6 h-6" /> Abono Barritas
                 </button>
               </div>
@@ -564,22 +566,22 @@ const App: React.FC = () => {
       )}
 
       <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-2xl border-t border-stone-200/50 h-24 flex items-center justify-around px-10 z-40 max-w-md mx-auto rounded-t-[5rem] shadow-2xl">
-        <button onClick={() => { setSelectedPlant(null); setShowAddModal(false); setShowSettings(false); }} className={`flex flex-col items-center transition-all ${!selectedPlant && !showAddModal && !showSettings ? 'text-emerald-700 scale-125' : 'text-stone-300'}`}><HistoryIcon /><span className="text-[8px] font-black mt-2 uppercase">Archivo</span></button>
-        <button onClick={() => setShowAddModal(true)} className={`flex flex-col items-center transition-all ${showAddModal ? 'text-emerald-700 scale-125' : 'text-stone-300'}`}><CameraIcon /><span className="text-[8px] font-black mt-2 uppercase">Scanner</span></button>
-        <button onClick={() => setShowSettings(true)} className={`flex flex-col items-center transition-all ${showSettings ? 'text-emerald-700 scale-125' : 'text-stone-300'}`}><PlusIcon className="rotate-45" /><span className="text-[8px] font-black mt-2 uppercase">Sistema</span></button>
+        <button onClick={() => { setSelectedPlant(null); setShowAddModal(false); setShowSettings(false); }} className={`flex flex-col items-center transition-all ${!selectedPlant && !showAddModal && !showSettings ? 'text-emerald-700 scale-125' : 'text-stone-300'}`}><HistoryIcon /><span className="text-[8px] font-black mt-2 uppercase tracking-tighter">Archivo</span></button>
+        <button onClick={() => setShowAddModal(true)} className={`flex flex-col items-center transition-all ${showAddModal ? 'text-emerald-700 scale-125' : 'text-stone-300'}`}><CameraIcon /><span className="text-[8px] font-black mt-2 uppercase tracking-tighter">Scanner</span></button>
+        <button onClick={() => setShowSettings(true)} className={`flex flex-col items-center transition-all ${showSettings ? 'text-emerald-700 scale-125' : 'text-stone-300'}`}><PlusIcon className="rotate-45" /><span className="text-[8px] font-black mt-2 uppercase tracking-tighter">Sistema</span></button>
       </nav>
 
       {showSettings && (
         <div className="fixed inset-0 z-[200] bg-emerald-950/50 backdrop-blur-md flex items-center justify-center p-12">
-          <div className="bg-white w-full rounded-[5rem] p-12 text-center shadow-2xl border border-stone-50">
+          <div className="bg-white w-full rounded-[5rem] p-12 text-center shadow-2xl border border-stone-50 animate-slide-up">
             <h2 className="font-serif text-4xl italic mb-12 text-emerald-950">Sistema Central</h2>
             <div className="space-y-5">
               <button onClick={toggleFontSize} className="w-full bg-emerald-50 text-emerald-700 py-7 rounded-[2rem] font-black uppercase text-[10px] tracking-widest border border-emerald-100 active:scale-95 transition-all">
                 Modo Lectura: {isLargeFont ? 'ACTIVADO' : 'ESTÁNDAR'}
               </button>
-              <button onClick={() => { if(confirm("¿Borrar todo el gabinete?")) { localStorage.clear(); window.location.reload(); } }} className="w-full bg-rose-50 text-rose-600 py-7 rounded-[2rem] font-black uppercase text-[10px] tracking-widest border border-rose-100 active:scale-95 transition-all">Purgar Datos</button>
+              <button onClick={() => { if(confirm("¿Borrar todo el gabinete botánico? Esta acción no se puede deshacer.")) { localStorage.clear(); window.location.reload(); } }} className="w-full bg-rose-50 text-rose-600 py-7 rounded-[2rem] font-black uppercase text-[10px] tracking-widest border border-rose-100 active:scale-95 transition-all">Purgar Datos</button>
             </div>
-            <button onClick={() => setShowSettings(false)} className="mt-12 text-[10px] font-black uppercase text-stone-300 tracking-[0.3em]">Cerrar Panel</button>
+            <button onClick={() => setShowSettings(false)} className="mt-12 text-[10px] font-black uppercase text-stone-300 tracking-[0.3em] active:text-emerald-700 transition-colors">Cerrar Panel</button>
           </div>
         </div>
       )}
@@ -591,16 +593,17 @@ const App: React.FC = () => {
         .animate-fade-in { animation: fade-in 0.5s ease-out; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        input[type='range'] { -webkit-appearance: none; background: transparent; }
         input[type='range']::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 18px;
-          height: 18px;
+          width: 22px;
+          height: 22px;
           background: #34d399;
           cursor: pointer;
           border-radius: 50%;
-          border: 2px solid white;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+          border: 3px solid white;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
       `}</style>
     </div>
